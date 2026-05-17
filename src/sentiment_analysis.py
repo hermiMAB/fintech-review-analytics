@@ -4,7 +4,7 @@ import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
-
+from dotenv import load_dotenv
 # Ensure the required NLTK resources are downloaded
 import nltk
 nltk.download('punkt', quiet=True)
@@ -42,10 +42,21 @@ import os
 import pandas as pd
 from huggingface_hub import InferenceClient
 
-# Initialize the client using your environment token
+current_file_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_file_dir)
+env_path = os.path.join(project_root, '.env')
+
+# Explicitly load the key-value pairs from the root .env file into system environment variables
+load_dotenv(dotenv_path=env_path)
+
+# Fetch the hidden token securely from system memory
+hf_token = os.getenv("HF_TOKEN")
+
+# Initialize the inference engine using the decoupled asset 
 client = InferenceClient(
     provider="hf-inference",
-    api_key="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",
+    api_key=hf_token,
+
 )
 
 def classify_review_sentiment(text, threshold=0.65):
