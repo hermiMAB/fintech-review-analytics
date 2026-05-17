@@ -8,3 +8,6 @@ data/processed/*.csv
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 .env
+__pycache__/
+*.pyc
+
