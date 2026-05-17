@@ -7,3 +7,7 @@ data/processed/*.csv
 .requirements.txt
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+.env
+__pycache__/
+*.pyc
+
