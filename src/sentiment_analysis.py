@@ -1,94 +1,92 @@
+import warnings, re, os, json
+warnings.filterwarnings('ignore')
+
 import pandas as pd
-import re
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from collections import Counter
+from wordcloud import WordCloud
+
 import nltk
-from nltk.tokenize import word_tokenize
+from nltk.sentiment import SentimentIntensityAnalyzer
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
-from dotenv import load_dotenv
-# Ensure the required NLTK resources are downloaded
-import nltk
-nltk.download('punkt', quiet=True)
-nltk.download('stopwords', quiet=True)
-nltk.download('wordnet', quiet=True)
-nltk.download('punkt_tab')
+from nltk import word_tokenize, pos_tag
+from textblob import TextBlob
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from transformers import pipeline
 
-def preprocess_for_nlp(text):
+# 1. Download necessary NLTK components
+# Note: Added 'punkt_tab' to your list to prevent the LookupError from earlier
+for res in ['vader_lexicon', 'stopwords', 'averaged_perceptron_tagger', 'punkt', 'wordnet', 'punkt_tab']:
+    nltk.download(res, quiet=True)
+
+sia = SentimentIntensityAnalyzer()
+stop_words = set(stopwords.words('english'))
+
+sns.set_theme(style='whitegrid')
+plt.rcParams['figure.figsize'] = (11, 5)
+print("Environment ready ✓")
+
+# 2. Load Local Hugging Face Model (No API Key required)
+print("Loading local Hugging Face model (this may take a moment the first time)...")
+classifier = pipeline(
+    "sentiment-analysis",
+    model="distilbert/distilbert-base-uncased-finetuned-sst-2-english",
+    truncation=True, 
+    max_length=512,
+    token=False
+)
+
+def modular_nlp_pipeline(text):
     """
     Task 2: Tokenization, Stop-word removal, and Lemmatization using NLTK. 
     """
     if pd.isna(text):
         return ""
     
-    # 1. Cleaning & Lowercasing: Keep only alphabetic characters
+    # Cleaning & Lowercasing: Keep only alphabetic characters
     text = re.sub(r'[^a-zA-Z\s]', ' ', str(text).lower())
 
-    # 2. Tokenization 
+    # Tokenization
     tokens = word_tokenize(text)
 
-    # 3. Stop-word removal & Lemmatization 
-    stop_words = set(stopwords.words('english'))
+    # Stop-word removal & Lemmatization
     lemmatizer = WordNetLemmatizer()
-
-    # Process tokens: Lemmatize and drop words that are stop-words or too short
-    processed_tokens = [
-        lemmatizer.lemmatize(t) 
-        for t in tokens 
+    processed = [
+        lemmatizer.lemmatize(t) for t in tokens 
         if t not in stop_words and len(t) > 2
     ]
     
-    return " ".join(processed_tokens)
+    return " ".join(processed)
 
-import os
-import pandas as pd
-from huggingface_hub import InferenceClient
 
-current_file_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_file_dir)
-env_path = os.path.join(project_root, '.env')
+def get_vader_label(score):
+    """Assigns positive, negative, or neutral based on VADER compound threshold."""
+    return 'positive' if score >= 0.05 else ('negative' if score <= -0.05 else 'neutral')
 
-# Explicitly load the key-value pairs from the root .env file into system environment variables
-load_dotenv(dotenv_path=env_path)
 
-# Fetch the hidden token securely from system memory
-hf_token = os.getenv("HF_TOKEN")
-
-# Initialize the inference engine using the decoupled asset 
-client = InferenceClient(
-    provider="hf-inference",
-    api_key=hf_token,
-
-)
-
-def classify_review_sentiment(text, threshold=0.65):
+def classify_hf_local(text, threshold=0.65):
     """
-    Classifies a single review using DistilBERT via Hugging Face Inference API.
+    Classifies a single review using the local DistilBERT pipeline.
     Applies a confidence threshold to introduce a 'neutral' category.
     """
-    # Fallback for empty or invalid strings
-    if not isinstance(text, str) or len(text).strip() == 0:
+    if not isinstance(text, str) or len(text.strip()) == 0:
         return "neutral", 0.0
 
     try:
-        # Call the serverless Hugging Face API
-        response = client.text_classification(
-            text,
-            model="distilbert/distilbert-base-uncased-finetuned-sst-2-english",
-        )
-        
-        # The API returns a list of dicts, usually sorted by highest score first:
-        # [{'label': 'POSITIVE', 'score': 0.9998}]
-        top_prediction = response[0]
-        label = top_prediction['label'].lower() # 'positive' or 'negative'
-        confidence = float(top_prediction['score'])
+        # Predict using local model
+        result = classifier(text)[0]
+        label = result['label'].lower() # 'positive' or 'negative'
+        confidence = float(result['score'])
         
         # Rigorous Threshold Check to derive the 'neutral' label
-        # If the model is unsure (e.g., confidence is lower than your threshold), classify as neutral
         if confidence < threshold:
             return "neutral", confidence
             
         return label, confidence
 
     except Exception as e:
-        # Return fallback values if the API rate limits or drops out
         print(f"Prediction error on text sample: {str(e)}")
         return "neutral", 0.0

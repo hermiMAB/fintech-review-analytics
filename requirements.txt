@@ -1,0 +1,22 @@
+# --- Data Manipulation & Math ---
+pandas
+numpy
+
+# --- Natural Language Processing ---
+nltk
+textblob
+scikit-learn
+
+# --- Local Machine Learning (Transformers) ---
+transformers
+torch
+
+# --- Visualization ---
+matplotlib
+seaborn
+wordcloud
+
+# --- Utilities & Extraction ---
+python-dotenv
+tqdm
+google-play-scraper
