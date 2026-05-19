@@ -12,6 +12,8 @@ The data processing lifecycle is modularized into three distinct stages:
 1. **Extraction (Scraping):** Automated data extraction from the Google Play Store using the `google-play-scraper` engine, pulling metadata and historical strings natively.
 2. **Preprocessing (NLP):** Pure Python and NLTK-driven cleaning pipeline that standardizes strings, tokenizes sentences, filters standard English stopwords, and lemmatizes words down to root concepts to enable structured text modeling.
 3. **Analytics (Thematic and Sentiment):** Sentiment classification utilizing a serverless pre-trained DistilBERT transformer alongside vectorization-based keyword extraction (TF-IDF/Bag-of-Words) to map clusters into high-level business categories.
+4. **Data Warehouse (Storage):** A persistent, relational PostgreSQL database architecture (`psycopg2` / `SQLAlchemy`). The schema isolates entity metadata (Banks) from operational telemetry (Reviews) to guarantee data integrity, fast query execution, and seamless dashboard integration.
+
 
 ## Pipeline Scope and Specifications
 * **Target Banks:** Commercial Bank of Ethiopia (CBE), Bank of Abyssinia (BOA), and Dashen Bank.
@@ -28,19 +30,23 @@ The data processing lifecycle is modularized into three distinct stages:
 
 ```text
 ├── data/
-│   ├── raw/                # Unaltered, source CSV files directly from the scraper.
-│   └── processed/          # Cleaned, tokenized, and sentiment-scored production tables.
-├── notebooks/              # Jupyter workspaces for exploratory execution and visual modeling.
-├── scripts/                # Production-ready executable Python components.
-├── src/                    # Core modular architecture packages.
-│   ├── __init__.py         # Initializes the src directory as a Python package.
-│   ├── sentiment_analysis.py # Hugging Face serverless client initialization and sentiment scoring.
-│   └── thematic_analysis.py  # Keyword grouping, TF-IDF weights, and plot distributions.
-├── tests/                  # Automated validation unit tests.
-│   └── test_analysis.py    # Unit tests for verification of data cleaning and theme mapping logic.
-├── .env.example            # Template detailing required hidden variables (HF_TOKEN).
+│   ├── raw/                        # Unaltered, source CSV files directly from the scraper.
+│   └── processed/                  # Cleaned, tokenized, and sentiment-scored production tables.
+├── notebooks/
+│   ├── sentiment_and_thematic_analysis.ipynb  # Exploratory NLP modeling workspace.
+│   └── database_insertion.ipynb               # PostgreSQL insertion and verification notebook.
+├── scripts/                        # Production-ready executable Python components.
+├── src/
+│   ├── __init__.py                 # Initializes the src directory as a Python package.
+│   ├── database.py                 # PostgreSQL connection handler, table creation, query runner.
+│   ├── sentiment_analysis.py       # Hugging Face serverless client and sentiment scoring.
+│   └── thematic_analysis.py        # Keyword grouping, TF-IDF weights, and plot distributions.
+├── tests/
+│   └── test_analysis.py            # Unit tests for data cleaning and theme mapping logic.
+├── schema.sql                      # PostgreSQL schema definition (banks + reviews tables).
+├── .env                            # Template for required environment variables.
 ├── .github/
 │   └── workflows/
-│       └── unittest.yml    # CI/CD pipeline configuration for automated test runs on GitHub.
-├── .gitignore              # Enforced files exclusion configurations (pycache, .env, venv).
-└── requirements.txt        # Frozen dependency versioning lists.
+│       └── unittest.yml            # CI/CD pipeline for automated test runs on GitHub.
+├── .gitignore                      # Exclusion config (pycache, .env, venv).
+└── requirements.txt                # Frozen dependency versions.
